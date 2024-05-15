@@ -18,6 +18,7 @@ import 'package:takwira_app/views/playerProfile/player_profile.dart';
 import 'package:takwira_app/views/profile/profile.dart';
 import 'package:takwira_app/views/teams/teams.dart';
 import 'package:http/http.dart' as http;
+import 'package:takwira_app/views/messages/messages.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class ShowText extends StateNotifier<bool> {
@@ -423,35 +424,31 @@ class Home extends ConsumerWidget {
           ),
         ),
         actions: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: Image.asset('assets/images/search.png'),
-              ),
-              IconButton(
-                onPressed: () {
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (context) => const Notifications(),
-                  //   ),
-                  // );
-                },
-                icon: Image.asset('assets/images/notifications.png'),
-              ),
-              IconButton(
-                onPressed: () {
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (context) => const Messages(),
-                  //   ),
-                  // );
-                },
-                icon: Image.asset('assets/images/chat.png'),
-              ),
-            ],
+          IconButton(
+            onPressed: () {},
+            icon: Image.asset('assets/images/search.png'),
+          ),
+          IconButton(
+            onPressed: () {
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(
+              //     builder: (context) => const Notifications(),
+              //   ),
+              // );
+            },
+            icon: Image.asset('assets/images/notifications.png'),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const Messages(),
+                ),
+              );
+            },
+            icon: Image.asset('assets/images/chat.png'),
           ),
         ],
       ),
