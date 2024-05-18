@@ -6,6 +6,7 @@ import 'package:takwira_app/data/user_data.dart';
 import 'package:takwira_app/providers/sent.dart';
 import 'package:takwira_app/views/cards/profile_card.dart';
 import 'package:takwira_app/views/playerProfile/player_profile.dart';
+import 'package:takwira_app/views/teams/edit_team.dart';
 
 final sentProvider = StateNotifierProvider<Sent, bool>(((ref) {
   return Sent();
@@ -17,12 +18,12 @@ class TeamDetails extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    bool leader = true;
     final teamData = ref.watch(teamDataProvider);
     final playerData = ref.watch(userDataProvider);
     final sent = ref.watch(sentProvider);
     bool member = false;
     bool owner = false;
-
 
     double a = 0;
     double screenWidth = MediaQuery.of(context).size.width;
@@ -62,15 +63,18 @@ class TeamDetails extends ConsumerWidget {
         ),
         centerTitle: true,
         actions: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: Image.asset('assets/images/share.png'),
-              ),
-              const SizedBox(width: 5),
-            ],
-          )
+          if (leader == true)
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditTeam(team: team),
+                  ),
+                );
+              },
+              icon: Image.asset('assets/images/edit.png'),
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -387,8 +391,8 @@ class TeamDetails extends ConsumerWidget {
                       (index) {
                         final playerData = team['team']['joinedPlayers'][index];
                         final player = {
-                          'username' : playerData['username'],
-                          'image' : playerData['image']
+                          'username': playerData['username'],
+                          'image': playerData['image']
                         };
                         return Row(
                           children: [
@@ -408,7 +412,7 @@ class TeamDetails extends ConsumerWidget {
                                   child: Ink(
                                     child: Column(
                                       children: [
-                                        ProfileCard(gameDataS : player),
+                                        ProfileCard(gameDataS: player),
                                         SizedBox(height: width(10)),
                                         Text(
                                           '${team['team']['joinedPlayers'][index]['playedGames']} games',

@@ -14,10 +14,10 @@ class Fields extends StatefulWidget {
   const Fields({super.key});
 
   @override
-    State<Fields> createState() => _FieldsState();
+  State<Fields> createState() => _FieldsState();
 }
 
-class _FieldsState extends State<Fields>{
+class _FieldsState extends State<Fields> {
   List<dynamic>? fields;
   @override
   void initState() {
@@ -30,7 +30,8 @@ class _FieldsState extends State<Fields>{
     var username = prefs.getString('username') ?? '';
     if (username.isNotEmpty) {
       try {
-        final response = await http.get(Uri.parse('https://takwira.me/api/fields?username=$username'));
+        final response = await http
+            .get(Uri.parse('https://takwira.me/api/fields?username=$username'));
         if (response.statusCode == 200) {
           final fieldsResponse = jsonDecode(response.body);
           setState(() {
@@ -44,6 +45,7 @@ class _FieldsState extends State<Fields>{
       }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     double a = 0;
@@ -56,205 +58,272 @@ class _FieldsState extends State<Fields>{
     double radius = screenWidth < 500 ? width(15) : 17.44186046511628;
     double sizedBoxWidth = screenWidth < 500 ? width(60) : 69.76744186046512;
     double activeAdd = screenWidth < 500 ? width(50) : 48.13953488372093;
-
-    return Scaffold(
-      backgroundColor: const Color(0xff343835),
-      floatingActionButton: SizedBox(
-        width: sizedBoxWidth,
-        height: sizedBoxWidth,
-        child: SpeedDial(
-          backgroundColor: Colors.transparent,
-          overlayColor: Colors.black,
-          overlayOpacity: 0.4,
-          elevation: 8.0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
+    if (fields == null) {
+      // Show loading indicator
+      return Scaffold(
+        backgroundColor: const Color(0xff343835),
+        appBar: AppBar(
+          backgroundColor: const Color(0xff343835),
+          title: const Padding(
+            padding: EdgeInsets.all(10.0),
+            child: Text(
+              'Fields',
+              style: TextStyle(
+                color: Color(0xFFF1EED0),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-          children: [
-            SpeedDialChild(
-              labelWidget: Container(
-                padding: const EdgeInsets.all(7.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xffF1EED0).withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(width(20)),
+          centerTitle: true,
+          leading: IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const Profile(),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width(14)),
-                  child: Text(
-                    'new Post',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: width(15),
-                      fontWeight: FontWeight.bold,
-                    ),
+              );
+            },
+            icon: Stack(
+              children: [
+                Image.asset('assets/images/profileIcon.png'),
+                Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Image.asset(
+                    'assets/images/avatar.png',
+                    fit: BoxFit.cover,
                   ),
-                ),
-              ),
-              onTap: () {},
+                )
+              ],
             ),
-            SpeedDialChild(
-              labelWidget: Container(
-                padding: const EdgeInsets.all(7.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xffF1EED0).withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(width(20)),
+          ),
+          actions: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {},
+                  icon: Image.asset('assets/images/map.png'),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width(14)),
-                  child: Text(
-                    'Create Game',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: width(15),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                SizedBox(width: width(30)),
+                IconButton(
+                  onPressed: () {},
+                  icon: Image.asset('assets/images/calander.png'),
                 ),
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CreateGame(),
-                  ),
-                );
-              },
-            ),
-            SpeedDialChild(
-              labelWidget: Container(
-                padding: const EdgeInsets.all(7.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xffF1EED0).withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(width(20)),
+                IconButton(
+                  onPressed: () {},
+                  icon: Image.asset('assets/images/search.png'),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width(14)),
-                  child: Text(
-                    'Create your Team',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: width(15),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CreateTeam(),
-                  ),
-                );
-              },
+                const SizedBox(width: 5),
+              ],
             ),
           ],
-          activeChild: Image.asset(
-            'assets/images/add.png',
-            width: activeAdd,
-            height: activeAdd,
-          ),
-          child: Image.asset(
-            'assets/images/add.png',
-          ),
         ),
-      ),
-      appBar: AppBar(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    } else {
+      return Scaffold(
         backgroundColor: const Color(0xff343835),
-        title: const Padding(
-          padding: EdgeInsets.all(10.0),
-          child: Text(
-            'Fields',
-            style: TextStyle(
-              color: Color(0xFFF1EED0),
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+        floatingActionButton: SizedBox(
+          width: sizedBoxWidth,
+          height: sizedBoxWidth,
+          child: SpeedDial(
+            backgroundColor: Colors.transparent,
+            overlayColor: Colors.black,
+            overlayOpacity: 0.4,
+            elevation: 8.0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radius),
+            ),
+            children: [
+              SpeedDialChild(
+                labelWidget: Container(
+                  padding: const EdgeInsets.all(7.0),
+                  decoration: BoxDecoration(
+                    color: const Color(0xffF1EED0).withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(width(20)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: width(14)),
+                    child: Text(
+                      'new Post',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: width(15),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                onTap: () {},
+              ),
+              SpeedDialChild(
+                labelWidget: Container(
+                  padding: const EdgeInsets.all(7.0),
+                  decoration: BoxDecoration(
+                    color: const Color(0xffF1EED0).withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(width(20)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: width(14)),
+                    child: Text(
+                      'Create Game',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: width(15),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CreateGame(),
+                    ),
+                  );
+                },
+              ),
+              SpeedDialChild(
+                labelWidget: Container(
+                  padding: const EdgeInsets.all(7.0),
+                  decoration: BoxDecoration(
+                    color: const Color(0xffF1EED0).withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(width(20)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: width(14)),
+                    child: Text(
+                      'Create your Team',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: width(15),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CreateTeam(),
+                    ),
+                  );
+                },
+              ),
+            ],
+            activeChild: Image.asset(
+              'assets/images/add.png',
+              width: activeAdd,
+              height: activeAdd,
+            ),
+            child: Image.asset(
+              'assets/images/add.png',
             ),
           ),
         ),
-        centerTitle: true,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const Profile(),
+        appBar: AppBar(
+          backgroundColor: const Color(0xff343835),
+          title: const Padding(
+            padding: EdgeInsets.all(10.0),
+            child: Text(
+              'Fields',
+              style: TextStyle(
+                color: Color(0xFFF1EED0),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
-            );
-          },
-          icon: Stack(
-            children: [
-              Image.asset('assets/images/profileIcon.png'),
-              Padding(
-                padding: const EdgeInsets.all(6),
-                child: Image.asset(
-                  'assets/images/avatar.png',
-                  fit: BoxFit.cover,
+            ),
+          ),
+          centerTitle: true,
+          leading: IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const Profile(),
                 ),
-              )
-            ],
+              );
+            },
+            icon: Stack(
+              children: [
+                Image.asset('assets/images/profileIcon.png'),
+                Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Image.asset(
+                    'assets/images/avatar.png',
+                    fit: BoxFit.cover,
+                  ),
+                )
+              ],
+            ),
+          ),
+          actions: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {},
+                  icon: Image.asset('assets/images/map.png'),
+                ),
+                SizedBox(width: width(30)),
+                IconButton(
+                  onPressed: () {},
+                  icon: Image.asset('assets/images/calander.png'),
+                ),
+                IconButton(
+                  onPressed: () {},
+                  icon: Image.asset('assets/images/search.png'),
+                ),
+                const SizedBox(width: 5),
+              ],
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: width(60)),
+            child: Column(
+              children: [
+                SizedBox(height: width(15)),
+                Column(
+                  children: List.generate(
+                    fields!.length,
+                    (index) {
+                      final field = fields![index];
+                      return Column(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      FieldProfile(field: field),
+                                ),
+                              );
+                            },
+                            child: Ink(
+                                child: Stack(
+                              children: [
+                                FieldCard(field: field),
+                              ],
+                            )),
+                          ),
+                          SizedBox(height: width(15)),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: Image.asset('assets/images/map.png'),
-              ),
-              SizedBox(width: width(30)),
-              IconButton(
-                onPressed: () {},
-                icon: Image.asset('assets/images/calander.png'),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: Image.asset('assets/images/search.png'),
-              ),
-              const SizedBox(width: 5),
-            ],
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: width(60)),
-          child: Column(
-            children: [
-              SizedBox(height: width(15)),
-              Column(
-                children: List.generate(
-                  fields!.length,
-                  (index) {
-                    final field = fields![index];
-                    return Column(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FieldProfile(field : field),
-                              ),
-                            );
-                          },
-                          child: Ink(
-                              child: Stack(
-                            children: [
-                              FieldCard(field : field),
-                            ],
-                          )),
-                        ),
-                        SizedBox(height: width(15)),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+      );
+    }
   }
 }

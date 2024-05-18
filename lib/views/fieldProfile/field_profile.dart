@@ -33,7 +33,7 @@ class _FieldProfileState extends ConsumerState<FieldProfile>
 
   @override
   void dispose() {
-    _tabController.dispose(); // Dispose the TabController
+    _tabController.dispose();
     super.dispose();
   }
 

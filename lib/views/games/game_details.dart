@@ -8,6 +8,7 @@ import 'package:takwira_app/data/user_data.dart';
 import 'package:takwira_app/providers/sent.dart';
 import 'package:takwira_app/views/cards/profile_card.dart';
 import 'package:takwira_app/views/playerProfile/player_profile.dart';
+import 'package:takwira_app/views/games/edit_game.dart';
 
 final sentProvider = StateNotifierProvider<Sent, bool>(((ref) {
   return Sent();
@@ -20,7 +21,6 @@ class GameDetails extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
 
-    print(gameDataS);
 
     final gameData = ref.watch(gameDataProvider);
     final fieldData = ref.watch(fieldDataProvider);
@@ -81,10 +81,18 @@ class GameDetails extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
+
         actions: [
           if (owner == true)
             IconButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditGame(game : gameDataS),
+                  ),
+                );
+              },
               icon: Image.asset('assets/images/edit.png'),
             ),
           IconButton(
@@ -320,7 +328,7 @@ class GameDetails extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     Text(
-                      '${gameDataS['field']['price']} DNT',
+                      '${gameDataS['field']['price']} TND',
                       style: TextStyle(
                         color: const Color(0xffF1EED0),
                         fontWeight: FontWeight.w600,
@@ -646,7 +654,6 @@ class GameDetails extends ConsumerWidget {
                     children: List.generate(
                       (gameData.playersNeeded -gameDataS['game']['playersLeft']).toInt(),
                       (index) {
-                        print('wawawaw ${gameDataS['game']['playersLeft']}');
                         return Row(
                           children: [
                             SizedBox(width: width(7)),

@@ -14,12 +14,14 @@ import 'package:takwira_app/views/fieldProfile/field_profile.dart';
 import 'package:takwira_app/views/games/game_details.dart';
 import 'package:takwira_app/views/games/games.dart';
 import 'package:takwira_app/views/navigation/navigation.dart';
+import 'package:takwira_app/views/notifications/notifications.dart';
 import 'package:takwira_app/views/playerProfile/player_profile.dart';
 import 'package:takwira_app/views/profile/profile.dart';
 import 'package:takwira_app/views/teams/teams.dart';
 import 'package:http/http.dart' as http;
 import 'package:takwira_app/views/messages/messages.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:takwira_app/views/playerProfile/player_widget.dart';
 
 class ShowText extends StateNotifier<bool> {
   ShowText() : super(false);
@@ -53,102 +55,65 @@ final usernameProvider = FutureProvider<String>((ref) async {
   return prefs.getString('username') ?? '';
 });
 
-class Home extends ConsumerWidget {
+class Home extends ConsumerStatefulWidget {
   const Home({super.key});
 
-  void addFollow(String userId) async{
+@override
+  ConsumerState<Home> createState() => _HomeState();
+}
 
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      var username = prefs.getString('username') ?? '';
-      var token = prefs.getString('token') ?? '';
-      var currentUserId = prefs.getString('id') ?? '';
+class _HomeState extends ConsumerState<Home> {
 
-      final IO.Socket socket = IO.io('https://takwira.me/', <String, dynamic>{
-          'transports': ['websocket'], 
-          'autoConnect': true,
-          'query': {
-            'token': token,
-            'username' : username
-          },
-        });
-        
-        socket.onConnect((_) {
-          print('Connected to server');
-          socket.emit('connection', {
-            'token': token,
-            
-          });
-        });
+  late IO.Socket socket;
+  
+  String? userid;
 
-        socket.onConnectError((_) {
-          print('Connection error');
-        });
+  @override
+  void initState() {
+    super.initState();
+    initSocket(); 
+  }
 
-        socket.onDisconnect((_) {
-          print('Disconnected from server');
-        });
+  void initSocket() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var username = prefs.getString('username') ?? '';
+    var token = prefs.getString('token') ?? '';
+    var currentUserId = prefs.getString('id') ?? '';
+    setState(() {
+      userid =currentUserId;
+    });
+    socket = IO.io('https://takwira.me/', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+      'query': {
+        'token': token,
+        'username': username,
+      },
+    });
 
-        
-          socket.emit('new-follow', {
-            'followerid': currentUserId, 
-            'receiverid':userId, 
-          });
+    socket.onConnect((_) {
+      print('Connected to server');
+      socket.emit('connection', {
+        'token': token,
+      });
+    });
 
-          socket.on('follow_ack', (data) {
-            print('Follow request acknowledged: $data');
-          });
-      }
+    socket.onConnectError((_) {
+      print('Connection error');
+    });
 
-  void removeFollow(userId) async{
-    print('waywa');
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      var username = prefs.getString('username') ?? '';
-      var token = prefs.getString('token') ?? '';
-      var currentUserId = prefs.getString('id') ?? '';
+    socket.onDisconnect((_) {
+      print('Disconnected from server');
+    });
+  }
 
-
-      final IO.Socket socket = IO.io('https://takwira.me/', <String, dynamic>{
-          'transports': ['websocket'], 
-          'autoConnect': true,
-          'query': {
-            'token': token,
-            'username' : username
-          },
-        });
-        
-        socket.onConnect((_) {
-          print('Connected to server');
-          socket.emit('connection', {
-            'token': token,
-            
-          });
-        });
-
-        socket.onConnectError((_) {
-          print('Connection error');
-        });
-
-        socket.onDisconnect((_) {
-          print('Disconnected from server');
-        });
-
-        
-          socket.emit('remove-follow', {
-            'followerid': currentUserId, 
-            'receiverid':userId, 
-          });
-
-          socket.on('follow_ack', (data) {
-            print('Follow request acknowledged: $data');
-          });
-      }
+  
   
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final usernameAsyncValue = ref.watch(usernameProvider);
     final String? id;
-    print('waaaaaaaaaaaaaaaaaa3');
     return FutureBuilder<Map<String, List<dynamic>>>(
       future: fetchData(usernameAsyncValue),
       builder: (context, snapshot) {
@@ -185,6 +150,7 @@ class Home extends ConsumerWidget {
     
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString('id') ?? '';
+    
     if (usernameAsyncValue is AsyncData<String>) {
       final username = usernameAsyncValue.value;
       print('Logged in as: $username');
@@ -430,12 +396,12 @@ class Home extends ConsumerWidget {
           ),
           IconButton(
             onPressed: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const Notifications(),
-              //   ),
-              // );
+               Navigator.push(
+                 context,
+                 MaterialPageRoute(
+                  builder: (context) => const Notifications(),
+                 ),
+               );
             },
             icon: Image.asset('assets/images/notifications.png'),
           ),
@@ -649,83 +615,10 @@ class Home extends ConsumerWidget {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: [
-                  Row(
-                    children: List.generate(
-                      10, 
-                      (index) => Consumer(
-                        builder: (context, ref, _) {
-                          final user = users?[index];
-                            final playerDatas = {
-                              'username': user['username'],
-                              'image': user['image'],
-                            };
-                          final followed = user['followers'];
-                          var follow = true;
-                          if (followed.contains(id[0])) {
-                            follow = false;
-                          }
-                          return Row(
-                            children: [
-                              SizedBox(width: width(7)),
-                              Column(
-                                children: [
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                               PlayerProfile(playerData: playerDatas),
-                                        ),
-                                      );
-                                    },
-                                    child: Ink(
-                                        child: ProfileCard(gameDataS: playerDatas)),
-                                  ),
-                                  SizedBox(height: width(15)),
-                                  SizedBox(
-                                    width: width(140),
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: width(7)),
-                                      child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          foregroundColor: follow
-                                              ? const Color(0xFFF1EED0)
-                                              : const Color(0xFF292929),
-                                          backgroundColor: follow
-                                              ? const Color(0xFF599068)
-                                              : const Color(0xFF807E73),
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: width(15),
-                                              vertical: width(16)),
-                                        ),
-                                        onPressed: () {
-                                          
-                                          follow ? addFollow(user['_id']) : removeFollow(user['_id']);
-                                          ref.read(followProviders1[index].notifier).followPressed();
-                                        },
-                                        child: Text(
-                                          follow ? 'Follow' : 'Following',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: width(16),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: width(7)),
-                ],
+                children: List.generate(
+                  10, 
+                  (index) => UserWidget(user: users?[index]  ,id : userid, socket : socket),
+                ),
               ),
             ),
             SizedBox(height: width(25)),
@@ -787,7 +680,7 @@ class Home extends ConsumerWidget {
                                   ),
                                 );
                               },
-                              child: Ink(child: FieldCard(field : fieldComp)),
+                              child: Ink(child: FieldCard(field : fieldComp , socket : socket)),
                             ),
                             SizedBox(width: width(11)),
                           ],
@@ -804,3 +697,4 @@ class Home extends ConsumerWidget {
     );
   }
 }
+

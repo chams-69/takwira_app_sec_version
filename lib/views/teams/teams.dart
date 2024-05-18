@@ -14,12 +14,13 @@ class Teams extends StatefulWidget {
   final dynamic? joinableTeams;
   const Teams({super.key, this.isJoinables, this.isOpponent, this.opponentTeams, this.joinableTeams});
   @override
-    State<Teams> createState() => _TeamsState();
+  State<Teams> createState() => _TeamsState();
 }
 
 class _TeamsState extends State<Teams>{
   List<dynamic>? teams;
-  
+  bool isLoading = true;  
+
   @override
   void initState() {
     super.initState();
@@ -27,18 +28,18 @@ class _TeamsState extends State<Teams>{
       if(widget.isOpponent == true){
         setState(() {
           teams = widget.opponentTeams;
+          isLoading = false; 
         });
       }else{
           setState(() {
             teams = widget.joinableTeams;
+            isLoading = false; 
           });
           
       }
     }else{
       fetchTeamsData();
     }
-
-    
   }
 
   Future<void> fetchTeamsData() async {
@@ -51,108 +52,122 @@ class _TeamsState extends State<Teams>{
           final fieldsResponse = jsonDecode(response.body);
           setState(() {
             teams = fieldsResponse['teams'];
+            isLoading = false; 
           });
         } else {
           print('Failed to fetch user data: ${response.statusCode}');
+          setState(() {
+            isLoading = false; 
+          });
         }
       } catch (e) {
         print('Failed to fetch user data: $e');
+        setState(() {
+          isLoading = false; 
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    print(teams);
-    double a = 0;
-    double screenWidth = MediaQuery.of(context).size.width;
-    double width(double width) {
-      a = width / 430;
-      return screenWidth * a;
-    }
-
-    double sizedBoxHeight = screenWidth < 500 ? width(60) : 69.76744186046512;
-    double sizedBoxWidth = screenWidth < 500 ? width(53) : 61.62790697674419;
-    return Scaffold(
-      backgroundColor: const Color(0xff343835),
-      floatingActionButton: SizedBox(
-        width: sizedBoxWidth,
-        height: sizedBoxHeight,
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CreateTeam(),
-              ),
-            );
-          },
-          child: Ink(
-            child: Image.asset('assets/images/addTeam.png'),
-          ),
+    if (isLoading) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
         ),
-      ),
-      appBar: AppBar(
+      );
+    } else {
+      double a = 0;
+      double screenWidth = MediaQuery.of(context).size.width;
+      double width(double width) {
+        a = width / 430;
+        return screenWidth * a;
+      }
+
+      double sizedBoxHeight = screenWidth < 500 ? width(60) : 69.76744186046512;
+      double sizedBoxWidth = screenWidth < 500 ? width(53) : 61.62790697674419;
+      return Scaffold(
         backgroundColor: const Color(0xff343835),
-        iconTheme: const IconThemeData(color: Color(0xFFF1EED0)),
-        title: const Padding(
-          padding: EdgeInsets.all(10.0),
-          child: Text(
-            'Teams',
-            style: TextStyle(
-              color: Color(0xFFF1EED0),
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+        floatingActionButton: SizedBox(
+          width: sizedBoxWidth,
+          height: sizedBoxHeight,
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateTeam(),
+                ),
+              );
+            },
+            child: Ink(
+              child: Image.asset('assets/images/addTeam.png'),
             ),
           ),
         ),
-        centerTitle: true,
-        actions: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: Image.asset('assets/images/search.png'),
+        appBar: AppBar(
+          backgroundColor: const Color(0xff343835),
+          iconTheme: const IconThemeData(color: Color(0xFFF1EED0)),
+          title: const Padding(
+            padding: EdgeInsets.all(10.0),
+            child: Text(
+              'Teams',
+              style: TextStyle(
+                color: Color(0xFFF1EED0),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(width: 5),
-            ],
+            ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: width(21)),
-          child: Column(
-            children: [
-              SizedBox(height: width(15)),
-              Column(
-                children: List.generate(
-                  teams!.length,
-                  (index) {
-                    final team = teams![index];
-                    return Column(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => TeamDetails(team : team),
-                              ),
-                            );
-                          },
-                          child: Ink(child: TeamCard(team: true, teamData : team)),
-                        ),
-                        SizedBox(height: width(15)),
-                      ],
-                    );
-                  },
+          centerTitle: true,
+          actions: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {},
+                  icon: Image.asset('assets/images/search.png'),
                 ),
-              ),
-            ],
+                const SizedBox(width: 5),
+              ],
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: width(21)),
+            child: Column(
+              children: [
+                SizedBox(height: width(15)),
+                Column(
+                  children: List.generate(
+                    teams!.length,
+                    (index) {
+                      final team = teams![index];
+                      return Column(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TeamDetails(team : team),
+                                ),
+                              );
+                            },
+                            child: Ink(child: TeamCard(team: true, teamData : team)),
+                          ),
+                          SizedBox(height: width(15)),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

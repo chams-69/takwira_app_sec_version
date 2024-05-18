@@ -3,7 +3,8 @@ import 'package:takwira_app/views/cards/field_card.dart';
 import 'package:takwira_app/views/fieldProfile/field_profile.dart';
 
 class AllMyFields extends StatelessWidget {
-  const AllMyFields({super.key});
+  final dynamic? fields;
+  const AllMyFields({super.key, this.fields});
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +41,9 @@ class AllMyFields extends StatelessWidget {
               SizedBox(height: width(15)),
               Column(
                 children: List.generate(
-                  10,
+                  fields.length,
                   (index) {
+                    final field = fields[index];
                     return Column(
                       children: [
                         InkWell(
@@ -49,11 +51,11 @@ class AllMyFields extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => FieldProfile(field : null),
+                                builder: (context) => FieldProfile(field : field),
                               ),
                             );
                           },
-                          child: Ink(child: FieldCard(field : null)),
+                          child: Ink(child: FieldCard(field : field)),
                         ),
                         SizedBox(height: width(15)),
                       ],

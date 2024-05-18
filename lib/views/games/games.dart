@@ -8,16 +8,17 @@ import 'package:takwira_app/views/create/create_game.dart';
 import 'package:takwira_app/views/games/game_details.dart';
 import 'package:http/http.dart' as http;
 
-
-
 class Games extends StatefulWidget {
-  const Games({super.key});
+  const Games({Key? key});
 
   @override
   State<Games> createState() => _GamesState();
 }
-class _GamesState extends State<Games>{
+
+class _GamesState extends State<Games> {
   List<dynamic>? games;
+  bool isLoading = true; // Add a loading state variable
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +35,7 @@ class _GamesState extends State<Games>{
           final gamesResponse = jsonDecode(response.body);
           setState(() {
             games = gamesResponse['games'];
+            isLoading = false; // Set isLoading to false when data is fetched
           });
         } else {
           print('Failed to fetch user data: ${response.statusCode}');
@@ -43,7 +45,7 @@ class _GamesState extends State<Games>{
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     double a = 0;
@@ -54,6 +56,16 @@ class _GamesState extends State<Games>{
     }
 
     double sizedBoxWidth = screenWidth < 500 ? width(60) : 69.76744186046512;
+
+    // Check if games data is null or loading
+    if (games == null || isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xff343835),
+        body: Center(
+          child: CircularProgressIndicator(), // Show a loading indicator
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xff343835),
@@ -119,11 +131,13 @@ class _GamesState extends State<Games>{
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => GameDetails(gameDataS :game),
+                                builder: (context) => GameDetails(gameDataS: game),
                               ),
                             );
                           },
-                          child: Ink(child: GameCard(game: true, gameDataS : game)),
+                          child: Ink(
+                            child: GameCard(game: true, gameDataS: game),
+                          ),
                         ),
                         SizedBox(height: width(15)),
                       ],

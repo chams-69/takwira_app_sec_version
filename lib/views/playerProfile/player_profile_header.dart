@@ -14,20 +14,24 @@ class PlayerProfileHeader extends ConsumerStatefulWidget {
   final dynamic? playerData;
   final dynamic? user;
   final dynamic? userId;
-  
+  final IO.Socket? socket;
   const PlayerProfileHeader(
-      {super.key, required this.playerData, required this.user, this.userId,});
+      {super.key, required this.playerData, required this.user, this.userId,this.socket});
 
   @override
     ConsumerState<PlayerProfileHeader> createState() => _PlayerProfileHeaderState();
 }
 
 class _PlayerProfileHeaderState extends ConsumerState<PlayerProfileHeader>{
-  late int followersCount = 0;
-
+  late int followersCount;
+  late bool follow;
   @override
   void initState() {
     super.initState();
+    final followed = widget.user['user']['followers'];
+    follow = followed.contains(widget.userId);
+    print(follow);
+    followersCount = widget.user!['user']['followers'].length;
   }
 
   @override
@@ -38,108 +42,49 @@ class _PlayerProfileHeaderState extends ConsumerState<PlayerProfileHeader>{
     }
   }
 
-  void makeFollow() async{
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      var username = prefs.getString('username') ?? '';
-      var token = prefs.getString('token') ?? '';
-      
+  void makeFollow() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  var username = prefs.getString('username') ?? '';
+  var token = prefs.getString('token') ?? '';
 
-      final IO.Socket socket = IO.io('https://takwira.me/', <String, dynamic>{
-          'transports': ['websocket'], 
-          'autoConnect': true,
-          'query': {
-            'token': token,
-            'username' : username
-          },
-        });
-        
-        socket.onConnect((_) {
-          print('Connected to server');
-          socket.emit('connection', {
-            'token': token,
-            
-          });
-        });
+  widget.socket?.emit('new-follow', {
+    'followerid': widget.userId,
+    'receiverid': widget.user['user']['_id'],
+  });
 
-        socket.onConnectError((_) {
-          print('Connection error');
-        });
+  void handleFollowAckAdd(data) {
+    print('Follow request acknowledged: $data');
+    setState(() {
+      followersCount++;
+    });
+    widget.socket?.off('follow_ack_add', handleFollowAckAdd);
+  }
 
-        socket.onDisconnect((_) {
-          print('Disconnected from server');
-        });
+  widget.socket?.on('follow_ack_add', handleFollowAckAdd);
+}
 
-        
-          socket.emit('new-follow', {
-            'followerid': widget.userId, 
-            'receiverid':widget.user['user']['_id'], 
-          });
+  void removeFollow() async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  var username = prefs.getString('username') ?? '';
+  var token = prefs.getString('token') ?? '';
 
-          socket.on('follow_ack', (data) {
-            print('Follow request acknowledged: $data');
-            setState(() {
-              followersCount++;
-              print('Ahna fl state ${followersCount}');
-            });
-          });
-      }
+  widget.socket?.emit('remove-follow', {
+    'followerid': widget.userId,
+    'receiverid': widget.user['user']['_id'],
+  });
 
-  void removeFollow() async{
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      var username = prefs.getString('username') ?? '';
-      var token = prefs.getString('token') ?? '';
-      
-
-      final IO.Socket socket = IO.io('https://takwira.me/', <String, dynamic>{
-          'transports': ['websocket'], 
-          'autoConnect': true,
-          'query': {
-            'token': token,
-            'username' : username
-          },
-        });
-        
-        socket.onConnect((_) {
-          print('Connected to server');
-          socket.emit('connection', {
-            'token': token,
-            
-          });
-        });
-
-        socket.onConnectError((_) {
-          print('Connection error');
-        });
-
-        socket.onDisconnect((_) {
-          print('Disconnected from server');
-        });
-
-        
-          socket.emit('remove-follow', {
-            'followerid': widget.userId, 
-            'receiverid':widget.user['user']['_id'], 
-          });
-
-          socket.on('follow_ack', (data) {
-            print('Follow request acknowledged: $data');
-            setState(() {
-              followersCount--;
-              print('Ahna fl state ${followersCount}');
-            });
-          });
-      }
+  void handleFollowAckRm(data) {
+    print('Follow request acknowledged: $data');
+    setState(() {
+      followersCount--;
+    });
+    widget.socket?.off('follow_ack_rm', handleFollowAckRm);
+  }
+  widget.socket?.on('follow_ack_rm', handleFollowAckRm);
+}
 
   @override
   Widget build(BuildContext context) {
-    followersCount = widget.user!['user']['followers'].length;
-    var follow = true;
-    if (widget.userId != null) {
-      final followed = widget.user['user']['followers'];
-      if (followed.contains(widget.userId)) {
-        follow = false;
-      }
-    }
     
     double screenWidth = MediaQuery.of(context).size.width;
     double a = 0;
@@ -393,20 +338,23 @@ class _PlayerProfileHeaderState extends ConsumerState<PlayerProfileHeader>{
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(width(9)),
                         ),
-                        foregroundColor: follow == true
+                        foregroundColor: follow == false
                             ? const Color(0xFFF1EED0)
                             : const Color(0xFF292929),
-                        backgroundColor: follow == true
+                        backgroundColor: follow == false
                             ? const Color(0xFF599068)
                             : const Color(0xFF807E73),
                         padding: EdgeInsets.symmetric(
                             horizontal: width(15), vertical: width(13)),
                       ),
                       onPressed: () {
-                        follow == true ? makeFollow() : removeFollow();
-                        // ref.read(followProvider.notifier).followPressed();
+                        follow == false ? makeFollow() : removeFollow();
+                        print('ahna nzelna aal button');
+                        setState(() {
+                          follow = !follow;
+                        });
                       },
-                      child: follow == true
+                      child: follow == false
                           ? Text(
                               'Follow',
                               style: TextStyle(

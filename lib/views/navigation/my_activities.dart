@@ -27,6 +27,8 @@ class _MyActivitiesState extends State<MyActivities>{
   List<dynamic>? teams;
   List<dynamic>? opponentTeams;
   List<dynamic>? joinableTeams;
+  List<dynamic>? fields;
+  List<dynamic>? otherFields;
   @override
   void initState() {
     super.initState();
@@ -42,12 +44,13 @@ class _MyActivitiesState extends State<MyActivities>{
         if (response.statusCode == 200) {
           final fieldsResponse = jsonDecode(response.body);
           setState(() {
-            // fields = fieldsResponse['fields'];
+            fields = fieldsResponse['fields'];
             upcomingGames = fieldsResponse['upcomingGames'];
             playedGames = fieldsResponse['playedGames'];
             teams = fieldsResponse['teams'];
             opponentTeams = fieldsResponse['opponentTeams'];
             joinableTeams = fieldsResponse['joinableTeams'];
+            otherFields = fieldsResponse['otherFields'];
 
           });
         } else {
@@ -259,7 +262,7 @@ class _MyActivitiesState extends State<MyActivities>{
               child: TabBarView(
                 children: [
                   MyGames(upcomingGames : upcomingGames, playedGames : playedGames),
-                  MyFields(),
+                  MyFields(fields : fields , otherFields : otherFields),
                   MyTeams(teams : teams, opponentTeams : opponentTeams , joinableTeams : joinableTeams),
                   MyLikedQuickies(),
                 ],

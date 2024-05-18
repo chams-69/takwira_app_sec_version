@@ -6,22 +6,22 @@ import 'package:takwira_app/views/messages/chatinterface.dart';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-class Messages extends StatefulWidget {
-  const Messages({super.key});
+class Notifications extends StatefulWidget {
+  const Notifications({super.key});
 
   @override
-  State<Messages> createState() =>_MessagesState();
+  State<Notifications> createState() =>_NotificationsState();
 }
 
-class _MessagesState extends State<Messages> {
-  List<dynamic> reachedUsers = [];
+class _NotificationsState extends State<Notifications> {
+  List<dynamic> notifications = [];
   String? userid;
   IO.Socket? socket;
 
   @override
   void initState() {
     super.initState();
-    fetchMessagesData();
+    fetchNotificationsData();
     initSocket();
   }
 
@@ -49,23 +49,23 @@ class _MessagesState extends State<Messages> {
     socket!.on('new-mobile-messages', (data) {
       setState(() {
         int index = -1;
-        for(int i= 0 ; i < reachedUsers.length ; i++){
-          dynamic? user = reachedUsers[i];
+        for(int i= 0 ; i < notifications.length ; i++){
+          dynamic? user = notifications[i];
           if((user['userId'] == data['senderId'] || user['userId'] == data['receiverId']) && user['userId'] !=id ){
             index = i;
             break;
           }
         }
         if (index != -1) {
-          reachedUsers[index]['messages'].add(data);
-          var user = reachedUsers.removeAt(index);
-          reachedUsers.insert(0, user);
+          notifications[index]['messages'].add(data);
+          var user = notifications.removeAt(index);
+          notifications.insert(0, user);
         }
       });
     });
   }
 
-  Future<void> fetchMessagesData() async {
+  Future<void> fetchNotificationsData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     var username = prefs.getString('username') ?? '';
     var id = prefs.getString('id') ?? '';
@@ -73,7 +73,7 @@ class _MessagesState extends State<Messages> {
     if (username.isNotEmpty) {
       try {
         final response = await http.get(
-            Uri.parse('https://takwira.me/api/messages/data?username=$username'),
+            Uri.parse('https://takwira.me/api/notifications/data?username=$username'),
             headers: {
               'flutter': 'true',
               'authorization': token,
@@ -81,7 +81,7 @@ class _MessagesState extends State<Messages> {
         if (response.statusCode == 200) {
           final dataResponse = jsonDecode(response.body);
           setState(() {
-            reachedUsers = dataResponse['users'];
+            notifications = dataResponse['notifications'];
             userid = id;
           });
         } else {
@@ -114,76 +114,13 @@ class _MessagesState extends State<Messages> {
 
     return Scaffold(
       backgroundColor: const Color(0xff343835),
-      floatingActionButton: SizedBox(
-        width: sizedBoxWidth,
-        height: sizedBoxWidth,
-        child: SpeedDial(
-          backgroundColor: Colors.transparent,
-          overlayColor: Colors.black,
-          overlayOpacity: 0.4,
-          elevation: 8.0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
-          ),
-          children: [
-            SpeedDialChild(
-              labelWidget: Container(
-                padding: const EdgeInsets.all(7.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xffF1EED0).withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(width(20)),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width(14)),
-                  child: Text(
-                    'New Message',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: width(15),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              onTap: () {},
-            ),
-            SpeedDialChild(
-              labelWidget: Container(
-                padding: const EdgeInsets.all(7.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xffF1EED0).withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(width(20)),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: width(14)),
-                  child: Text(
-                    'Create a Group',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: width(15),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              onTap: () {},
-            ),
-          ],
-          activeChild: Image.asset(
-            'assets/images/addMessage.png',
-            width: activeAdd,
-            height: activeAdd,
-          ),
-          child: Image.asset('assets/images/addMessage.png'),
-        ),
-      ),
       appBar: AppBar(
         backgroundColor: const Color(0xff343835),
         iconTheme: const IconThemeData(color: Color(0xFFF1EED0)),
         title: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Text(
-            'Messages',
+            'Notifications',
             style: TextStyle(
               color: Color(0xFFF1EED0),
               fontSize: 16,
@@ -192,52 +129,20 @@ class _MessagesState extends State<Messages> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          InkWell(
-            onTap: () {},
-            child: Ink(
-              child: Image.asset('assets/images/chatBot.png'),
-            ),
-          ),
-          const SizedBox(width: 10),
-        ],
       ),
-      body: reachedUsers.isEmpty
+      body: notifications.isEmpty
           ? Center(child: CircularProgressIndicator())
           : ListView.builder(
-              itemCount: reachedUsers.length,
+              itemCount: notifications.length,
               itemBuilder: (context, index) {
-                var messages = reachedUsers[index]['messages'];
-                dynamic lastMessageTimestamp = messages.last['timestamp'];
-
-                const int maxLength = 20;
-                final String lastMessageContent = messages.last['content'];
-                final int messageLength = lastMessageContent.length;
-                final bool isLastMessageFromCurrentUser = messages.last['senderId'] == userid;
-
-                String lastMessage;
-                if (isLastMessageFromCurrentUser) {
-                  lastMessage = messageLength <= maxLength
-                      ? 'You : $lastMessageContent'
-                      : 'You : ${lastMessageContent.substring(0, maxLength - 2)}...';
-                } else {
-                  lastMessage = messageLength <= maxLength
-                      ? lastMessageContent
-                      : '${lastMessageContent.substring(0, maxLength - 2)}...';
-                }
-
-                if (reachedUsers[index]['userId'] == userid) {
-                  return Container();
-                }
-
                 return InkWell(
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            ChatInterface(user: reachedUsers[index], socket: socket),
-                      ),
-                    );
+                    // Navigator.of(context).push(
+                    //   MaterialPageRoute(
+                    //     builder: (context) =>
+                    //         ChatInterface(user: notifications[index], socket: socket),
+                    //   ),
+                    // );
                   },
                   child: Column(
                     children: [
@@ -252,7 +157,7 @@ class _MessagesState extends State<Messages> {
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(width(25)),
                                   child: Image.network(
-                                    '${reachedUsers[index]['userImageUrl']}',
+                                    '${notifications[index]['owner']['image']}',
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -263,21 +168,21 @@ class _MessagesState extends State<Messages> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          reachedUsers[index]['username'],
+                          notifications[index]['owner']['username'],
                           style: TextStyle(
                               color: Color(0xffF1EED0),
                               fontSize: width(14),
                               fontWeight: FontWeight.normal),
                         ),
                         Text(
-                          '$lastMessage',
+                          '${notifications[index]['notification']['content']}',
                           style: TextStyle(
-                              color: Color(0xffF1EED0),
-                              fontSize: width(10),
+                              color: Color.fromARGB(255, 179, 179, 179),
+                              fontSize: width(9),
                               fontWeight: FontWeight.normal),
                         ),
                         Text(
-                          formatMessageTimestamp(lastMessageTimestamp),
+                          formatMessageTimestamp(notifications[index]['notification']['timestamp']),
                           style: TextStyle(
                               color: Color(0xffBFBCA0),
                               fontSize: width(10),

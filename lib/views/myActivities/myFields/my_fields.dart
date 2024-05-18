@@ -5,7 +5,8 @@ import 'package:takwira_app/views/myActivities/myFields/all_my_fields.dart';
 import 'package:takwira_app/views/navigation/fields.dart';
 
 class MyFields extends StatelessWidget {
-  const MyFields({super.key});
+  final dynamic? fields , otherFields;
+  const MyFields({super.key , this.fields, this.otherFields});
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +25,7 @@ class MyFields extends StatelessWidget {
             children: List.generate(
               3,
               (index) {
+                final field = fields[index];
                 return Column(
                   children: [
                     Center(
@@ -32,14 +34,14 @@ class MyFields extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => FieldProfile(field : null),
+                              builder: (context) => FieldProfile(field : field),
                             ),
                           );
                         },
                         child: Ink(
                             child: Stack(
                           children: [
-                            FieldCard(field : null),
+                            FieldCard(field : field),
                           ],
                         )),
                       ),
@@ -55,7 +57,7 @@ class MyFields extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const AllMyFields(),
+                  builder: (context) => AllMyFields(fields : fields),
                 ),
               );
             },
@@ -113,8 +115,9 @@ class MyFields extends StatelessWidget {
                 const SizedBox(width: 10),
                 Row(
                   children: List.generate(
-                    5,
+                    otherFields.length,
                     (index) {
+                      final field = otherFields[index];
                       return Row(
                         children: [
                           InkWell(
@@ -122,11 +125,11 @@ class MyFields extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => FieldProfile(field : null),
+                                  builder: (context) => FieldProfile(field : field),
                                 ),
                               );
                             },
-                            child: Ink(child: FieldCard(field : null)),
+                            child: Ink(child: FieldCard(field : field)),
                           ),
                           SizedBox(width: width(11)),
                         ],

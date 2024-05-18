@@ -7,11 +7,11 @@ import 'package:takwira_app/views/playerProfile/player_posts.dart';
 import 'package:takwira_app/views/playerProfile/player_profile_header.dart';
 import 'package:takwira_app/views/playerProfile/player_quickies.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class PlayerProfile extends StatefulWidget {
   final dynamic? playerData;
-  const PlayerProfile({super.key , required this.playerData});
+  const PlayerProfile({super.key, required this.playerData});
 
   @override
   State<PlayerProfile> createState() => _PlayerProfileState();
@@ -23,6 +23,8 @@ class _PlayerProfileState extends State<PlayerProfile>
   int selectedIndex = 0;
   dynamic? user;
   dynamic? currentUserId;
+  late IO.Socket socket;
+  bool isLoading = true; // Add a loading state variable
 
   @override
   void initState() {
@@ -34,6 +36,37 @@ class _PlayerProfileState extends State<PlayerProfile>
       });
     });
     fetchUserData();
+    initSocket();
+  }
+
+  void initSocket() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var username = prefs.getString('username') ?? '';
+    var token = prefs.getString('token') ?? '';
+    var currentUserId = prefs.getString('id') ?? '';
+    socket = IO.io('https://takwira.me/', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+      'query': {
+        'token': token,
+        'username': username,
+      },
+    });
+
+    socket.onConnect((_) {
+      print('Connected to server');
+      socket.emit('connection', {
+        'token': token,
+      });
+    });
+
+    socket.onConnectError((_) {
+      print('Connection error');
+    });
+
+    socket.onDisconnect((_) {
+      print('Disconnected from server');
+    });
   }
 
   Future<void> fetchUserData() async {
@@ -48,6 +81,7 @@ class _PlayerProfileState extends State<PlayerProfile>
           setState(() {
             user = userData;
             currentUserId = id;
+            isLoading = false; // Set isLoading to false when data is fetched
           });
         } else {
           print('Failed to fetch user data: ${response.statusCode}');
@@ -66,8 +100,17 @@ class _PlayerProfileState extends State<PlayerProfile>
 
   @override
   Widget build(BuildContext context) {
+    // Check if playerData is null or loading
+    if (widget.playerData == null || isLoading) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(), // Show a loading indicator
+        ),
+      );
+    }
+
     final playerData = widget.playerData;
-    
+
     double a = 0;
     double screenWidth = MediaQuery.of(context).size.width;
     double width(double width) {
@@ -110,7 +153,7 @@ class _PlayerProfileState extends State<PlayerProfile>
             return [
               SliverList(
                 delegate: SliverChildListDelegate([
-                  PlayerProfileHeader(playerData : playerData, user : user, userId :currentUserId),
+                  PlayerProfileHeader(playerData: playerData, user: user, userId: currentUserId, socket: socket),
                 ]),
               ),
             ];
@@ -171,7 +214,7 @@ class _PlayerProfileState extends State<PlayerProfile>
               ),
               Expanded(
                   child: TabBarView(controller: _tabController, children: [
-                PlayerDetails(user : user),
+                PlayerDetails(user: user),
                 PlayerPosts(),
                 PlayerQuickies(),
               ]))

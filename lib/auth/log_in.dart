@@ -32,7 +32,7 @@ class _LogInState extends State<LogIn> {
         'password': password,
       },
     );
-
+    print(url);
     if (response.statusCode == 200) {
       var responseBody = json.decode(response.body);
 
@@ -156,6 +156,7 @@ class _LogInState extends State<LogIn> {
                       backgroundColor: Color(0xFF599068),
                     ),
                     onPressed: () {
+                      print('wa');
                       signIn(context);
                     },
                     child: Padding(

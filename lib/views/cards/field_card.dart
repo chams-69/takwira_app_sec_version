@@ -1,21 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:takwira_app/data/field_data.dart';
 import 'package:takwira_app/providers/loved.dart';
 import 'package:takwira_app/views/fieldProfile/field_profile.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 final loveProvider = StateNotifierProvider<Loved, bool>(((ref) {
   return Loved();
 }));
 
-class FieldCard extends ConsumerWidget {
+class FieldCard extends ConsumerStatefulWidget {
+
   final dynamic? field;
-  const FieldCard({super.key, required this.field});
+  final IO.Socket? socket;
+
+  const FieldCard({super.key, required this.field, this.socket});
+  @override
+  ConsumerState<FieldCard> createState() => _FieldCardState();
+}
+
+class _FieldCardState extends ConsumerState<FieldCard> {
+  bool isLiked = false;
+  dynamic? field;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    getLiked();
+    super.initState();
+    
+  }
+
+  void getLiked()async{
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString('id') ?? '';
+    field = widget.field;
+    if (field['field']['likedPlayers'] != null && field['field']['likedPlayers'].contains(id)) {
+      setState(() {
+        isLiked = true;
+      });
+    }else{
+      setState(() {
+        isLiked = false;
+      });
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    IO.Socket? socket = widget.socket;
+    dynamic? field = widget.field;
     final fieldData = ref.watch(fieldDataProvider);
-    final loved = ref.watch(loveProvider);
     double a = 0;
     double screenWidth = MediaQuery.of(context).size.width;
     double width(double width) {
@@ -23,6 +59,36 @@ class FieldCard extends ConsumerWidget {
       return screenWidth * a;
     }
 
+    List<Map<String, dynamic>> services = [
+      {"service": "Cark Park", "icon": "assets/images/parking.png"},
+      {"service": "Coffee", "icon": "assets/images/coffe.png"},
+      {"service": "Changing Room", "icon": "assets/images/wc.png"},
+      {"service": "Watter", "icon": "assets/images/water.png"},
+    ];
+
+    void addOrRemoveLike() async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      var username = prefs.getString('username') ?? '';
+      if(!isLiked){
+        socket?.emit('add-field-like',{
+          'field' : field,
+          'username' : username
+        });
+        setState(() {
+          isLiked = true;
+        });
+      }else{
+        socket?.emit('remove-field-like',{
+          'field' : field,
+          'username' : username
+        });
+        setState(() {
+          isLiked = false;
+        });
+      }
+    }
+
+    List<dynamic> fieldServices = field['field']['services'];
     return Stack(
       children: [
         Padding(
@@ -87,17 +153,68 @@ class FieldCard extends ConsumerWidget {
                 SizedBox(height: width(65)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: fieldServices.map((serviceName) {
+                        Map<String, dynamic> service = services.firstWhere(
+                          (service) => service['service'] == serviceName,
+                          orElse: () => {},
+                        );
+                        if (service.isNotEmpty) {
+                          return Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Image.asset(
+                                    service['icon'],
+                                    width: width(10),
+                                    height: width(10),
+                                  ),
+                                  SizedBox(width: width(5)),
+                                  Text(
+                                    service['service'],
+                                    style: TextStyle(
+                                      color: const Color(0xFFF1EED0),
+                                      fontSize: width(10),
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: width(2)),
+                            ],
+                          );
+                        } else {
+                          return SizedBox
+                              .shrink(); 
+                        }
+                      }).toList(),
+                    ),
+                    Column(
                       children: [
-                        Image.asset(
-                          'assets/images/parking.png',
-                          width: width(10),
-                          height: width(10),
+                        Row(
+                          children: [
+                            Image.asset(
+                              'assets/images/adress.png',
+                              width: width(12),
+                              height: width(12),
+                            ),
+                            SizedBox(width: width(2)),
+                            Text(
+                              fieldData.adress,
+                              style: TextStyle(
+                                color: const Color(0xFFF1EED0),
+                                fontSize: width(10),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: width(5)),
+                        SizedBox(height: width(2)),
                         Text(
-                          'Parking',
+                          '${(field['field']['distance'] as double).toStringAsFixed(2)} Km away',
                           style: TextStyle(
                             color: const Color(0xFFF1EED0),
                             fontSize: width(10),
@@ -105,95 +222,7 @@ class FieldCard extends ConsumerWidget {
                           ),
                         ),
                       ],
-                    ),
-                    Row(
-                      children: [
-                        Image.asset(
-                          'assets/images/adress.png',
-                          width: width(12),
-                          height: width(12),
-                        ),
-                        SizedBox(width: width(2)),
-                        Text(
-                          fieldData.adress,
-                          style: TextStyle(
-                            color: const Color(0xFFF1EED0),
-                            fontSize: width(10),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: width(2)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Image.asset(
-                          'assets/images/coffe.png',
-                          width: width(10),
-                          height: width(10),
-                        ),
-                        SizedBox(width: width(5)),
-                        Text(
-                          'Cafeteria',
-                          style: TextStyle(
-                            color: const Color(0xFFF1EED0),
-                            fontSize: width(10),
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      '${(field['field']['distance'] as double).toStringAsFixed(2)} Km away',
-                      style: TextStyle(
-                        color: const Color(0xFFF1EED0),
-                        fontSize: width(10),
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: width(2)),
-                Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/wc.png',
-                      width: width(10),
-                      height: width(10),
-                    ),
-                    SizedBox(width: width(5)),
-                    Text(
-                      'Toilets',
-                      style: TextStyle(
-                        color: const Color(0xFFF1EED0),
-                        fontSize: width(10),
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: width(2)),
-                Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/water.png',
-                      width: width(10),
-                      height: width(10),
-                    ),
-                    SizedBox(width: width(5)),
-                    Text(
-                      'Water',
-                      style: TextStyle(
-                        color: const Color(0xFFF1EED0),
-                        fontSize: width(10),
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
+                    )
                   ],
                 ),
               ],
@@ -211,13 +240,13 @@ class FieldCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(width(5)),
               ),
               padding: EdgeInsets.symmetric(
-                  horizontal: width(15), vertical: width(10)), // button's shape
+                  horizontal: width(15), vertical: width(10)), 
             ),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FieldProfile(field : null),
+                  builder: (context) => FieldProfile(field: field),
                 ),
               );
             },
@@ -235,11 +264,11 @@ class FieldCard extends ConsumerWidget {
           right: width(29),
           child: InkWell(
             onTap: () {
-              ref.read(loveProvider.notifier).lovePressed();
+              addOrRemoveLike();
             },
             child: Ink(
               child: Image.asset(
-                loved == false
+                isLiked == false
                     ? 'assets/images/love.png'
                     : 'assets/images/loved.png',
                 width: width(19),

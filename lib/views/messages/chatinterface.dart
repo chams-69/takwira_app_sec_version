@@ -8,7 +8,8 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class ChatInterface extends StatefulWidget {
   final dynamic? user;
-  const ChatInterface({this.user, super.key});
+  final IO.Socket? socket;
+  const ChatInterface({this.user, super.key, this.socket});
 
   @override
   State<ChatInterface> createState() => _ChatInterfaceState();
@@ -26,7 +27,6 @@ class _ChatInterfaceState extends State<ChatInterface> {
 
   final ScrollController _scrollController = ScrollController();
 
-  IO.Socket? socket;
 
   @override
   void initState() {
@@ -36,7 +36,6 @@ class _ChatInterfaceState extends State<ChatInterface> {
 
     setState(() {
       user = widget.user;
-      print(user);
     });
 
     WidgetsBinding.instance!.addPostFrameCallback((_) {
@@ -48,43 +47,31 @@ class _ChatInterfaceState extends State<ChatInterface> {
   }
 
   void initializeSocket() async {
+    void handleMessageAck(data) async{
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    var tokenV = prefs.getString('token') ?? '';
-    var usernameV = prefs.getString('username') ?? '';
-
-    socket = IO.io(
-      'https://takwira.me/',
-      <String, dynamic>{
-        'transports': ['websocket'],
-        'autoConnect': true,
-        'query': {
-          'token': tokenV,
-          'username': usernameV,
-        },
-      },
-    );
-    socket!.onConnect((_) {
-      print('Connected to server');
-    });
-
-    socket!.on('new-mobile-message', (data) {
-      print('Received message: $data');
-      setState(() {
-        widget.user['messages'].add({
-          'file': {'fileUrl': '', 'fileName': '', 'fileSize': ''},
-          'senderId': data['senderId'],
-          'receiverId': data['receiverId'],
-          'content': data['content']
+      var id = prefs.getString('id') ?? '';
+      print('xddd');
+      if((data['senderId'] == id && data['receiverId'] == user['userId']) ||(data['senderId'] == user['userId'] && data['receiverId'] == id)){
+        setState(() {
+          widget.user['messages'].add({
+            'file': {'fileUrl': '', 'fileName': '', 'fileSize': ''},
+            'senderId': data['senderId'],
+            'receiverId': data['receiverId'],
+            'content': data['content']
+          });
         });
-      });
+      }
       Future.delayed(Duration(milliseconds: 50), () {
         _scrollToBottom();
       });
-    });
+    widget.socket?.off('new-mobile-message', handleMessageAck);
+  }
+  widget.socket?.on('new-mobile-message', handleMessageAck);
+
   }
 
   void sendMessage(String message) async {
-    socket!.emit('send-message', {
+    widget.socket!.emit('send-message', {
       'receiverId': user['userId'],
       'senderId': userid,
       'content': message,
@@ -194,7 +181,7 @@ class _ChatInterfaceState extends State<ChatInterface> {
                   itemBuilder: (_, index) {
                     final message = widget.user['messages'][index];
                     final isCurrentUser = message['senderId'] == userid;
-
+                    
                     return BubbleSpecialThree(
                       isSender: isCurrentUser,
                       text: message['content'].toString(),
