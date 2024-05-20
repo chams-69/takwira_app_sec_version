@@ -58,20 +58,20 @@ final usernameProvider = FutureProvider<String>((ref) async {
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
 
-@override
+  @override
   ConsumerState<Home> createState() => _HomeState();
 }
 
 class _HomeState extends ConsumerState<Home> {
-
   late IO.Socket socket;
-  
-  String? userid;
 
+  String? userid;
+  int? notificationsCount;
   @override
   void initState() {
     super.initState();
-    initSocket(); 
+    setUserNotificationsCount();
+    initSocket();
   }
 
   void initSocket() async {
@@ -80,7 +80,7 @@ class _HomeState extends ConsumerState<Home> {
     var token = prefs.getString('token') ?? '';
     var currentUserId = prefs.getString('id') ?? '';
     setState(() {
-      userid =currentUserId;
+      userid = currentUserId;
     });
     socket = IO.io('https://takwira.me/', <String, dynamic>{
       'transports': ['websocket'],
@@ -105,9 +105,31 @@ class _HomeState extends ConsumerState<Home> {
     socket.onDisconnect((_) {
       print('Disconnected from server');
     });
+
+    socket.on('update-notif-count',(data){
+      setState(() {
+        notificationsCount = data;
+      });
+    });
+    
   }
 
-  
+  void setUserNotificationsCount()async{
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? id = prefs.getString('id') ?? '';
+    String? username = prefs.getString('username') ?? '';
+    final currentUserDataResponse = await http.get(
+      Uri.parse('https://takwira.me/api/currentuser?username=$username'),
+    ); 
+
+    final currentUserData = jsonDecode(currentUserDataResponse.body);
+    setState(() {
+      notificationsCount = currentUserData['currentUser']['notifCount'];
+    });
+
+    
+  }
+
   
 
   @override
@@ -135,22 +157,19 @@ class _HomeState extends ConsumerState<Home> {
           final users = snapshot.data!['users'];
           final fieldsData = snapshot.data!['fieldsData'];
           final id = snapshot.data!['id'];
-          return _buildHomeUI(context, ref, games, fields, users, fieldsData, id);
+          return _buildHomeUI(
+              context, ref, games, fields, users, fieldsData, id);
         }
       },
     );
   }
 
-
-
-
+  
 
   Future<Map<String, List<dynamic>>> fetchData(
       AsyncValue<String> usernameAsyncValue) async {
-    
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? id = prefs.getString('id') ?? '';
-    
     if (usernameAsyncValue is AsyncData<String>) {
       final username = usernameAsyncValue.value;
       print('Logged in as: $username');
@@ -159,12 +178,19 @@ class _HomeState extends ConsumerState<Home> {
           Uri.parse('https://takwira.me/api/home?username=$username'),
         );
 
-        final fieldsDataResponse = await http.get(Uri.parse('https://takwira.me/api/fields?username=$username'),
-        ); /*Ya chams hethom mta3 el fields , el response eli fou9 mta3 el games */ 
+        final fieldsDataResponse = await http.get(
+          Uri.parse('https://takwira.me/api/fields?username=$username'),
+        ); 
 
-        if (response.statusCode == 200 && fieldsDataResponse.statusCode == 200) {
+        final currentUserDataResponse = await http.get(
+          Uri.parse('https://takwira.me/api/currentuser?username=$username'),
+        ); 
+
+        if (response.statusCode == 200 &&
+            fieldsDataResponse.statusCode == 200) {
           final fieldsData = jsonDecode(fieldsDataResponse.body);
           final data = jsonDecode(response.body);
+          final currentUserData = jsonDecode(currentUserDataResponse.body);
           final List<dynamic> games = data['games'];
           final List<dynamic> fields = data['fields'];
           final List<dynamic> users = data['users'];
@@ -175,8 +201,8 @@ class _HomeState extends ConsumerState<Home> {
             'games': games,
             'fields': fields,
             'users': users,
-            'fieldsData' : FieldsData,
-            'id' : idList
+            'fieldsData': FieldsData,
+            'id': idList,
           };
         } else {
           print('Failed to retrieve data. Error ${response.statusCode}');
@@ -184,8 +210,8 @@ class _HomeState extends ConsumerState<Home> {
             'games': [],
             'fields': [],
             'users': [],
-            'fieldsData' : [],
-            'id' : []
+            'fieldsData': [],
+            'id': []
           };
         }
       } catch (e) {
@@ -194,8 +220,8 @@ class _HomeState extends ConsumerState<Home> {
           'games': [],
           'fields': [],
           'users': [],
-          'fieldsData' : [],
-          'id' : []
+          'fieldsData': [],
+          'id': [],
         };
       }
     } else {
@@ -203,21 +229,27 @@ class _HomeState extends ConsumerState<Home> {
         'games': [],
         'fields': [],
         'users': [],
-        'fieldsData' : [],
-        'id' : []
+        'fieldsData': [],
+        'id': [],
+        'currentUser' : []
       };
     }
   }
 
   Widget _buildHomeUI(
-      BuildContext context, WidgetRef ref, List<dynamic>? games, List<dynamic>? fields, List<dynamic>? users, List<dynamic>? fieldsData, dynamic id) {
+      BuildContext context,
+      WidgetRef ref,
+      List<dynamic>? games,
+      List<dynamic>? fields,
+      List<dynamic>? users,
+      List<dynamic>? fieldsData,
+      dynamic id) {
     double a = 0;
     double screenWidth = MediaQuery.of(context).size.width;
     double width(double width) {
       a = width / 430;
       return screenWidth * a;
     }
-
 
     final showText = ref.watch(showTextProvider);
     double radius = screenWidth < 500 ? width(15) : 17.44186046511628;
@@ -394,16 +426,44 @@ class _HomeState extends ConsumerState<Home> {
             onPressed: () {},
             icon: Image.asset('assets/images/search.png'),
           ),
-          IconButton(
-            onPressed: () {
-               Navigator.push(
-                 context,
-                 MaterialPageRoute(
-                  builder: (context) => const Notifications(),
-                 ),
-               );
-            },
-            icon: Image.asset('assets/images/notifications.png'),
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Notifications(),
+                    ),
+                  );
+                },
+                icon: Image.asset('assets/images/notifications.png'),
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  constraints: BoxConstraints(
+                    minWidth: 12,
+                    minHeight: 12,
+                  ),
+                  child: Text(
+                    '${notificationsCount}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
           ),
           IconButton(
             onPressed: () {
@@ -419,282 +479,283 @@ class _HomeState extends ConsumerState<Home> {
         ],
       ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            SizedBox(height: 10),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: width(40)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Games(),
-                        ),
-                      );
-                    },
-                    child: Ink(
-                      child: Image.asset(
-                        'assets/images/games.png',
-                        width: width(100),
-                        height: width(100),
+        child: Column(children: [
+          SizedBox(height: 10),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: width(40)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Games(),
                       ),
+                    );
+                  },
+                  child: Ink(
+                    child: Image.asset(
+                      'assets/images/games.png',
+                      width: width(100),
+                      height: width(100),
                     ),
                   ),
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Teams(),
-                        ),
-                      );
-                    },
-                    child: Ink(
-                      child: Image.asset(
-                        'assets/images/teams.png',
-                        width: width(100),
-                        height: width(100),
+                ),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Teams(),
                       ),
+                    );
+                  },
+                  child: Ink(
+                    child: Image.asset(
+                      'assets/images/teams.png',
+                      width: width(100),
+                      height: width(100),
                     ),
                   ),
-                  InkWell(
-                    onTap: () {
-                      ref.read(showTextProvider.notifier).textTrue();
+                ),
+                InkWell(
+                  onTap: () {
+                    ref.read(showTextProvider.notifier).textTrue();
 
-                      Future.delayed(const Duration(seconds: 3), () {
-                        ref.read(showTextProvider.notifier).textfalse();
-                      });
-                    },
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Opacity(
-                          opacity: showText
-                              ? 0.3
-                              : 0.4, // Set the opacity of the image
-                          child: Image.asset(
-                            'assets/images/tournement.png',
-                            width: width(100),
-                            height: width(100),
+                    Future.delayed(const Duration(seconds: 3), () {
+                      ref.read(showTextProvider.notifier).textfalse();
+                    });
+                  },
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Opacity(
+                        opacity: showText
+                            ? 0.3
+                            : 0.4, // Set the opacity of the image
+                        child: Image.asset(
+                          'assets/images/tournement.png',
+                          width: width(100),
+                          height: width(100),
+                        ),
+                      ),
+                      AnimatedOpacity(
+                        opacity: showText ? 0.7 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          'Coming Soon...',
+                          style: TextStyle(
+                            color: const Color(0xFFF1EED0),
+                            fontSize: width(10),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        AnimatedOpacity(
-                          opacity: showText ? 0.7 : 0.0,
-                          duration: const Duration(milliseconds: 300),
-                          child: Text(
-                            'Coming Soon...',
-                            style: TextStyle(
-                              color: const Color(0xFFF1EED0),
-                              fontSize: width(10),
-                              fontWeight: FontWeight.bold,
-                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: width(25)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: Text(
+                  'Games near you',
+                  style: TextStyle(
+                    color: const Color(0xFFF1EED0),
+                    fontSize: width(12),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Games(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                        color: const Color(0xFFF1EED0),
+                        fontSize: width(10),
+                        fontWeight: FontWeight.w400),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: width(10)),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                const SizedBox(width: 10),
+                Row(
+                  children: List.generate(
+                    games!.length,
+                    (index) {
+                      final game = games[index];
+                      return Row(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      GameDetails(gameDataS: game),
+                                ),
+                              );
+                            },
+                            child: Ink(
+                                child: GameCard(game: true, gameDataS: game)),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: width(25)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Text(
-                    'Games near you',
-                    style: TextStyle(
-                      color: const Color(0xFFF1EED0),
-                      fontSize: width(12),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Games(),
-                        ),
+                          SizedBox(
+                            width: width(11),
+                          )
+                        ],
                       );
                     },
-                    child: Text(
-                      'See all',
-                      style: TextStyle(
-                          color: const Color(0xFFF1EED0),
-                          fontSize: width(10),
-                          fontWeight: FontWeight.w400),
-                    ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: width(10)),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  const SizedBox(width: 10),
-                  Row(
-                    children: List.generate(
-                      games!.length,
-                      (index) {
-                        final game = games[index];
-                        return Row(
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        GameDetails(gameDataS: game),
-                                  ),
-                                );
-                              },
-                              child: Ink(
-                                  child: GameCard(game: true, gameDataS: game)),
-                            ),
-                            SizedBox(
-                              width: width(11),
-                            )
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: width(25)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Text(
-                    'Players near you',
-                    style: TextStyle(
-                      color: const Color(0xFFF1EED0),
-                      fontSize: width(12),
-                      fontWeight: FontWeight.w600,
-                    ),
+          ),
+          SizedBox(height: width(25)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: Text(
+                  'Players near you',
+                  style: TextStyle(
+                    color: const Color(0xFFF1EED0),
+                    fontSize: width(12),
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Navigation(index: 3),
-                        ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Navigation(index: 3),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                        color: const Color(0xFFF1EED0),
+                        fontSize: width(10),
+                        fontWeight: FontWeight.w400),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: width(10)),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(
+                10,
+                (index) =>
+                    UserWidget(user: users?[index], id: userid, socket: socket),
+              ),
+            ),
+          ),
+          SizedBox(height: width(25)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: Text(
+                  'Fields near you',
+                  style: TextStyle(
+                    color: const Color(0xFFF1EED0),
+                    fontSize: width(12),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Navigation(index: 4),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                        color: const Color(0xFFF1EED0),
+                        fontSize: width(10),
+                        fontWeight: FontWeight.w400),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: width(10)),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                const SizedBox(width: 10),
+                Row(
+                  children: List.generate(
+                    5,
+                    (index) {
+                      final fieldComp = fieldsData![index];
+                      return Row(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      FieldProfile(field: fieldComp),
+                                ),
+                              );
+                            },
+                            child: Ink(
+                                child: FieldCard(
+                                    field: fieldComp, socket: socket)),
+                          ),
+                          SizedBox(width: width(11)),
+                        ],
                       );
                     },
-                    child: Text(
-                      'See all',
-                      style: TextStyle(
-                          color: const Color(0xFFF1EED0),
-                          fontSize: width(10),
-                          fontWeight: FontWeight.w400),
-                    ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: width(10)),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(
-                  10, 
-                  (index) => UserWidget(user: users?[index]  ,id : userid, socket : socket),
-                ),
-              ),
-            ),
-            SizedBox(height: width(25)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Text(
-                    'Fields near you',
-                    style: TextStyle(
-                      color: const Color(0xFFF1EED0),
-                      fontSize: width(12),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Navigation(index: 4),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'See all',
-                      style: TextStyle(
-                          color: const Color(0xFFF1EED0),
-                          fontSize: width(10),
-                          fontWeight: FontWeight.w400),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: width(10)),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  const SizedBox(width: 10),
-                  Row(
-                    children: List.generate(
-                      5,
-                      (index) {
-                        final fieldComp = fieldsData![index];
-                        return Row(
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FieldProfile(field : fieldComp),
-                                  ),
-                                );
-                              },
-                              child: Ink(child: FieldCard(field : fieldComp , socket : socket)),
-                            ),
-                            SizedBox(width: width(11)),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ]
-        ),
+          ),
+        ]),
       ),
     );
   }
 }
-

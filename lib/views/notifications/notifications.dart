@@ -1,22 +1,24 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:takwira_app/views/messages/chatinterface.dart';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:takwira_app/views/games/game_details.dart';
+import 'package:takwira_app/views/teams/team_details.dart';
 
 class Notifications extends StatefulWidget {
   const Notifications({super.key});
 
   @override
-  State<Notifications> createState() =>_NotificationsState();
+  State<Notifications> createState() => _NotificationsState();
 }
 
 class _NotificationsState extends State<Notifications> {
   List<dynamic> notifications = [];
+  List<dynamic> displayedNotifications = [];
   String? userid;
   IO.Socket? socket;
+  int itemsToShow = 10;
 
   @override
   void initState() {
@@ -46,23 +48,14 @@ class _NotificationsState extends State<Notifications> {
       print('Connected to server');
     });
 
-    socket!.on('new-mobile-messages', (data) {
+    socket!.on('new-mobile-join-request', (data) {
+    print(data);
       setState(() {
-        int index = -1;
-        for(int i= 0 ; i < notifications.length ; i++){
-          dynamic? user = notifications[i];
-          if((user['userId'] == data['senderId'] || user['userId'] == data['receiverId']) && user['userId'] !=id ){
-            index = i;
-            break;
-          }
-        }
-        if (index != -1) {
-          notifications[index]['messages'].add(data);
-          var user = notifications.removeAt(index);
-          notifications.insert(0, user);
-        }
+        notifications.insert(0, data);
+        updateDisplayedNotifications();
       });
     });
+
   }
 
   Future<void> fetchNotificationsData() async {
@@ -73,16 +66,18 @@ class _NotificationsState extends State<Notifications> {
     if (username.isNotEmpty) {
       try {
         final response = await http.get(
-            Uri.parse('https://takwira.me/api/notifications/data?username=$username'),
-            headers: {
-              'flutter': 'true',
-              'authorization': token,
-            });
+          Uri.parse('https://takwira.me/api/notifications/data?username=$username'),
+          headers: {
+            'flutter': 'true',
+            'authorization': token,
+          },
+        );
         if (response.statusCode == 200) {
           final dataResponse = jsonDecode(response.body);
           setState(() {
             notifications = dataResponse['notifications'];
             userid = id;
+            updateDisplayedNotifications();
           });
         } else {
           print('Failed to fetch user data: ${response.statusCode}');
@@ -93,10 +88,82 @@ class _NotificationsState extends State<Notifications> {
     }
   }
 
+  void updateDisplayedNotifications() {
+    setState(() {
+      displayedNotifications = notifications.take(itemsToShow).toList();
+    });
+  }
+
+  void loadMoreNotifications() {
+    setState(() {
+      itemsToShow += 10;
+      updateDisplayedNotifications();
+    });
+  }
+
   @override
   void dispose() {
     socket!.off('new-mobile-messages');
     super.dispose();
+  }
+
+  void redirectToTeamOrGame (notification , type)async{
+    print(notification);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var username = prefs.getString('username') ?? '';
+    var id = prefs.getString('id') ?? '';
+    var token = prefs.getString('token') ?? '';
+    if(type == 1 || type == 2){
+      var teamId = notification['teamId'];
+      final response = await http.get(
+        Uri.parse('https://takwira.me/api/getteam/data?username=$username&teamId=$teamId&type=$type'),
+        headers: {
+          'flutter': 'true',
+          'authorization': token,
+          'notification' : jsonEncode(notification)
+        },
+      );
+      if (response.statusCode == 200) {
+      var responseBody = json.decode(response.body);
+
+      var bodySuccess = responseBody['success'];
+      if (bodySuccess) {
+        var team = responseBody['team'];
+        print(team);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TeamDetails(team: team),
+          ),
+        );
+      }
+    }
+    }else if(type == 3){
+      var gameId = notification['gameId'];
+      final response = await http.get(
+        Uri.parse('https://takwira.me/api/getgame/data?username=$username&gameId=$gameId&type=$type'),
+        headers: {
+          'flutter': 'true',
+          'authorization': token,
+          'notification' : jsonEncode(notification)
+        },
+      );
+      if (response.statusCode == 200) {
+      var responseBody = json.decode(response.body);
+
+      var bodySuccess = responseBody['success'];
+      if (bodySuccess) {
+        var game = responseBody['game'];
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GameDetails(gameDataS: game),
+          ),
+        );
+      }
+    }
+
+    }
   }
 
   @override
@@ -130,23 +197,34 @@ class _NotificationsState extends State<Notifications> {
         ),
         centerTitle: true,
       ),
-      body: notifications.isEmpty
+      body: displayedNotifications.isEmpty
           ? Center(child: CircularProgressIndicator())
           : ListView.builder(
-              itemCount: notifications.length,
+              itemCount: displayedNotifications.length + 1,
               itemBuilder: (context, index) {
-                return InkWell(
-                  onTap: () {
-                    // Navigator.of(context).push(
-                    //   MaterialPageRoute(
-                    //     builder: (context) =>
-                    //         ChatInterface(user: notifications[index], socket: socket),
-                    //   ),
-                    // );
-                  },
-                  child: Column(
-                    children: [
-                      Padding(
+                if (index == displayedNotifications.length) {
+                  return displayedNotifications.length < notifications.length
+                      ? TextButton(
+                          onPressed: loadMoreNotifications,
+                          child: Text('See more'),
+                        )
+                      : SizedBox.shrink();
+                }
+                return Padding(
+                  padding: EdgeInsets.only(bottom: width(10)),
+                  child: InkWell(
+                    onTap: () {
+                      if(displayedNotifications[index]['notification']['type'] == 1 ||displayedNotifications[index]['notification']['type'] == 2){
+                        redirectToTeamOrGame(displayedNotifications[index]['notification'] , 1);
+                      }else{
+                        redirectToTeamOrGame(displayedNotifications[index]['notification'] , 3);
+                      }
+                    },
+                    child: Container(
+                      color: displayedNotifications[index]['notification']['status'] == false
+                          ? Color.fromARGB(255, 60, 59, 59)
+                          : Colors.transparent,
+                      child: Padding(
                         padding: EdgeInsets.all(width(10)),
                         child: ListTile(
                           leading: Stack(
@@ -157,7 +235,7 @@ class _NotificationsState extends State<Notifications> {
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(width(25)),
                                   child: Image.network(
-                                    '${notifications[index]['owner']['image']}',
+                                    '${displayedNotifications[index]['owner']['image']}',
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -166,37 +244,40 @@ class _NotificationsState extends State<Notifications> {
                           ),
                           title: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          notifications[index]['owner']['username'],
-                          style: TextStyle(
-                              color: Color(0xffF1EED0),
-                              fontSize: width(14),
-                              fontWeight: FontWeight.normal),
+                            children: [
+                              Text(
+                                displayedNotifications[index]['owner']['username'],
+                                style: TextStyle(
+                                  color: Color(0xffF1EED0),
+                                  fontSize: width(14),
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                              Text(
+                                '${displayedNotifications[index]['notification']['content']}',
+                                style: TextStyle(
+                                  color: Color.fromARGB(255, 179, 179, 179),
+                                  fontSize: width(9),
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                              Text(
+                                formatMessageTimestamp(displayedNotifications[index]['notification']['timestamp']),
+                                style: TextStyle(
+                                  color: Color(0xffBFBCA0),
+                                  fontSize: width(10),
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        Text(
-                          '${notifications[index]['notification']['content']}',
-                          style: TextStyle(
-                              color: Color.fromARGB(255, 179, 179, 179),
-                              fontSize: width(9),
-                              fontWeight: FontWeight.normal),
-                        ),
-                        Text(
-                          formatMessageTimestamp(notifications[index]['notification']['timestamp']),
-                          style: TextStyle(
-                              color: Color(0xffBFBCA0),
-                              fontSize: width(10),
-                              fontWeight: FontWeight.normal),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }

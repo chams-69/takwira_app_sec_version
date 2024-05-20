@@ -1,30 +1,41 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:linear_progress_bar/linear_progress_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:takwira_app/data/team.data.dart';
 import 'package:takwira_app/data/user_data.dart';
 import 'package:takwira_app/providers/sent.dart';
 import 'package:takwira_app/views/cards/profile_card.dart';
+import 'package:takwira_app/views/navigation/home.dart';
 import 'package:takwira_app/views/playerProfile/player_profile.dart';
 import 'package:takwira_app/views/teams/edit_team.dart';
+import 'package:takwira_app/views/teams/invite_team_players.dart';
+import 'package:takwira_app/views/teams/team_requests.dart';
 
 final sentProvider = StateNotifierProvider<Sent, bool>(((ref) {
   return Sent();
 }));
 
-class TeamDetails extends ConsumerWidget {
+class TeamDetails extends ConsumerStatefulWidget {
   final dynamic? team;
   const TeamDetails({super.key, required this.team});
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeamDetails> createState() => _TeamDetailsState();
+}
+
+class _TeamDetailsState extends ConsumerState<TeamDetails> {
+  @override
+  Widget build(BuildContext context) {
+    final dynamic? team = widget.team;
     bool leader = true;
     final teamData = ref.watch(teamDataProvider);
     final playerData = ref.watch(userDataProvider);
     final sent = ref.watch(sentProvider);
     bool member = false;
     bool owner = false;
-
     double a = 0;
     double screenWidth = MediaQuery.of(context).size.width;
     double width(double width) {
@@ -45,6 +56,66 @@ class TeamDetails extends ConsumerWidget {
       'ST': 'Striker',
     };
 
+    print(team['team']['isPlayerRequested'] == true);
+    print(team['team']['isUserJoined']);
+
+    void teamManagement(int type) async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      var username = prefs.getString('username') ?? '';
+      var token = prefs.getString('token') ?? '';
+      print('this is type : ${type}');
+      Uri url;
+      if (type == 1) {
+        url = Uri.parse('https://takwira.me/api/deleteteam');
+      } else if (type == 2) {
+        url = Uri.parse('https://takwira.me/api/sendteamjoin');
+      } else if (type == 3) {
+        url = Uri.parse('https://takwira.me/api/jointeam');
+      } else {
+        url = Uri.parse('https://takwira.me/api/leaveteam');
+      }
+      final http.Response response = await http.post(
+        url,
+        headers: {
+          'flutter': 'true',
+          'authorization': token,
+        },
+        body: {
+          'teamId': team['team']['id'],
+          'username': username,
+          'token': token,
+          'team': jsonEncode(team)
+        },
+      );
+      if (response.statusCode == 200 && type != 1) {
+        var responseBody = json.decode(response.body);
+
+        var bodySuccess = responseBody['success'];
+        if (bodySuccess) {
+          var teamB = responseBody['team'];
+          print(teamB);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TeamDetails(team: teamB),
+            ),
+          );
+        }
+      } else if (response.statusCode == 200 && type == 1) {
+        var responseBody = json.decode(response.body);
+
+        var bodySuccess = responseBody['success'];
+        if (bodySuccess) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Home(),
+            ),
+          );
+        }
+      }
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xff343835),
       appBar: AppBar(
@@ -63,7 +134,7 @@ class TeamDetails extends ConsumerWidget {
         ),
         centerTitle: true,
         actions: [
-          if (leader == true)
+          if (team['team']['isTeamOwner'] == true)
             IconButton(
               onPressed: () {
                 Navigator.push(
@@ -74,6 +145,22 @@ class TeamDetails extends ConsumerWidget {
                 );
               },
               icon: Image.asset('assets/images/edit.png'),
+            ),
+            if (team['team']['isTeamOwner'] == true)
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InviteTeamPlayers(team : team),
+                  ),
+                );
+              },
+              icon: SizedBox(
+                width: 28, 
+                height: 28, 
+                child: Image.asset('assets/images/addPlayers.png'),
+              ),
             ),
         ],
       ),
@@ -103,6 +190,38 @@ class TeamDetails extends ConsumerWidget {
                   'assets/images/linear3.png',
                   width: screenWidth,
                   height: width(253),
+                ),
+                if (team['team']['isTeamOwner'] == true)
+                Padding(
+                  padding: EdgeInsets.only(top: width(10)), // Adjust the value as needed
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TeamRequests(team: team['team']),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: width(70),
+                      height: width(40),
+                      decoration: BoxDecoration(
+                        color: Color(0xff474D48),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Requests',
+                          style: TextStyle(
+                            color: Color(0xFFF1EED0),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 Column(
                   children: [
@@ -513,9 +632,29 @@ class TeamDetails extends ConsumerWidget {
                 : TextButton(
                     onPressed: () {
                       ref.read(sentProvider.notifier).sentPressed();
+                      if (team['team']['isTeamOwner'] == true) {
+                        teamManagement(1);
+                      } else if (team['team']['isPlayerRequested'] == false &&
+                          team['team']['isUserJoined'] == false) {
+                        teamManagement(2);
+                      } else if (team['team']['isPlayerRequested'] == true &&
+                          team['team']['isUserJoined'] == false) {
+                        teamManagement(3);
+                      } else if (team['team']['isPlayerRequested'] == false &&
+                          team['team']['isUserJoined'] == true) {
+                        teamManagement(4);
+                      }
                     },
                     child: Text(
-                      sent == false ? 'Send Request' : 'Cancel Request',
+                      team['team']['isTeamOwner'] == true
+                          ? 'Delete Team'
+                          : team['team']['isPlayerRequested'] == false &&
+                                  team['team']['isUserJoined'] == false
+                              ? 'Send Request'
+                              : team['team']['isPlayerRequested'] == true &&
+                                      team['team']['isUserJoined'] == false
+                                  ? 'Join'
+                                  : 'Leave',
                       style: TextStyle(
                         color: sent == false
                             ? const Color(0xffF1EED0)

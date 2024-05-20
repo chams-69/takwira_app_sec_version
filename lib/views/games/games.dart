@@ -35,7 +35,7 @@ class _GamesState extends State<Games> {
           final gamesResponse = jsonDecode(response.body);
           setState(() {
             games = gamesResponse['games'];
-            isLoading = false; // Set isLoading to false when data is fetched
+            isLoading = false;
           });
         } else {
           print('Failed to fetch user data: ${response.statusCode}');
