@@ -5,6 +5,7 @@ import 'package:takwira_app/views/messages/chat_list.dart';
 import 'package:takwira_app/views/messages/sender.dart';
 import 'package:takwira_app/views/playerProfile/player_profile.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatInterface extends StatefulWidget {
   final dynamic? user;
@@ -27,7 +28,6 @@ class _ChatInterfaceState extends State<ChatInterface> {
 
   final ScrollController _scrollController = ScrollController();
 
-
   @override
   void initState() {
     super.initState();
@@ -47,11 +47,12 @@ class _ChatInterfaceState extends State<ChatInterface> {
   }
 
   void initializeSocket() async {
-    void handleMessageAck(data) async{
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    void handleMessageAck(data) async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
       var id = prefs.getString('id') ?? '';
       print('xddd');
-      if((data['senderId'] == id && data['receiverId'] == user['userId']) ||(data['senderId'] == user['userId'] && data['receiverId'] == id)){
+      if ((data['senderId'] == id && data['receiverId'] == user['userId']) ||
+          (data['senderId'] == user['userId'] && data['receiverId'] == id)) {
         setState(() {
           widget.user['messages'].add({
             'file': {'fileUrl': '', 'fileName': '', 'fileSize': ''},
@@ -64,10 +65,10 @@ class _ChatInterfaceState extends State<ChatInterface> {
       Future.delayed(Duration(milliseconds: 50), () {
         _scrollToBottom();
       });
-    widget.socket?.off('new-mobile-message', handleMessageAck);
-  }
-  widget.socket?.on('new-mobile-message', handleMessageAck);
+      widget.socket?.off('new-mobile-message', handleMessageAck);
+    }
 
+    widget.socket?.on('new-mobile-message', handleMessageAck);
   }
 
   void sendMessage(String message) async {
@@ -181,17 +182,49 @@ class _ChatInterfaceState extends State<ChatInterface> {
                   itemBuilder: (_, index) {
                     final message = widget.user['messages'][index];
                     final isCurrentUser = message['senderId'] == userid;
-                    
-                    return BubbleSpecialThree(
-                      isSender: isCurrentUser,
-                      text: message['content'].toString(),
-                      color:
-                          isCurrentUser ? Color(0xff599068) : Color(0xff3D423E),
-                      tail: false,
-                      textStyle: TextStyle(
-                        color: Color(0xffF1EED0),
-                        fontSize: width(16),
-                      ),
+                    final fileUrl = message['file']?['fileUrl'];
+                    final fileName = message['file']?['fileName'];
+                    bool isImage = false;
+                    if (fileUrl != null) {
+                      final fileExtension =
+                          fileUrl.split('.').last.toLowerCase();
+                      isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp']
+                          .contains(fileExtension);
+                    }
+
+                    return Column(
+                      crossAxisAlignment: isCurrentUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        if (fileUrl != null && isImage) ...[
+                          Container(
+                            margin: !isCurrentUser ? EdgeInsets.only(left: 18.0, top: 8.0) : EdgeInsets.only(right: 18.0, top: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10.0),
+                              child: Image.network(
+                                fileUrl,
+                                height: 200,
+                                width: 200,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 8), 
+                        ],
+                        BubbleSpecialThree(
+                          isSender: isCurrentUser,
+                          text: message['content'].toString(),
+                          color: isCurrentUser
+                              ? Color(0xff599068)
+                              : Color(0xff3D423E),
+                          tail: false,
+                          textStyle: TextStyle(
+                            color: Color(0xffF1EED0),
+                            fontSize: width(16),
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),

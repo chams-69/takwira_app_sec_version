@@ -16,6 +16,7 @@ import 'package:takwira_app/views/games/invite_game_players.dart';
 import 'package:takwira_app/views/navigation/home.dart';
 import 'package:takwira_app/views/playerProfile/player_profile.dart';
 import 'package:takwira_app/views/games/edit_game.dart';
+import 'package:takwira_app/views/announcements/announcement.dart';
 
 final sentProvider = StateNotifierProvider<Sent, bool>(((ref) {
   return Sent();
@@ -536,7 +537,14 @@ class _GameDetailsState extends ConsumerState<GameDetails> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => Announcement(gameid : gameDataS['game']['id']),
+                                ),
+                              );
+                            },
                             icon: Image.asset(
                               'assets/images/announcement.png',
                               width: width(40),

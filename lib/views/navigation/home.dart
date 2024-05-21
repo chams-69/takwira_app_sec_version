@@ -675,9 +675,9 @@ class _HomeState extends ConsumerState<Home> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: List.generate(
-                10,
+                users!.length < 5 ?users!.length : 5 ,
                 (index) =>
-                    UserWidget(user: users?[index], id: userid, socket: socket),
+                    UserWidget(user: users[index], id: userid, socket: socket),
               ),
             ),
           ),
@@ -726,9 +726,9 @@ class _HomeState extends ConsumerState<Home> {
                 const SizedBox(width: 10),
                 Row(
                   children: List.generate(
-                    5,
+                    fieldsData!.length < 5 ?fieldsData!.length : fieldsData!.length ,
                     (index) {
-                      final fieldComp = fieldsData![index];
+                      final fieldComp = fieldsData[index];
                       return Row(
                         children: [
                           InkWell(

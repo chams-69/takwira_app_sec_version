@@ -14,6 +14,7 @@ import 'package:takwira_app/views/playerProfile/player_profile.dart';
 import 'package:takwira_app/views/teams/edit_team.dart';
 import 'package:takwira_app/views/teams/invite_team_players.dart';
 import 'package:takwira_app/views/teams/team_requests.dart';
+import 'package:takwira_app/views/announcements/announcement.dart';
 
 final sentProvider = StateNotifierProvider<Sent, bool>(((ref) {
   return Sent();
@@ -55,9 +56,6 @@ class _TeamDetailsState extends ConsumerState<TeamDetails> {
       'LW': 'Left Winger',
       'ST': 'Striker',
     };
-
-    print(team['team']['isPlayerRequested'] == true);
-    print(team['team']['isUserJoined']);
 
     void teamManagement(int type) async {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -356,6 +354,21 @@ class _TeamDetailsState extends ConsumerState<TeamDetails> {
                                     height: width(24),
                                   ),
                                 ),
+                                IconButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>  Announcement(teamid :team['team']['id'] ),
+                                      ),
+                                    );
+                                  },
+                                  icon: Image.asset(
+                                    'assets/images/announcementMessage.png',
+                                    width: width(24),
+                                    height: width(24),
+                                  ),
+                                ),
                               ],
                             )
                         ],
@@ -387,6 +400,7 @@ class _TeamDetailsState extends ConsumerState<TeamDetails> {
                     height: width(24),
                   ),
                 ),
+                
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
