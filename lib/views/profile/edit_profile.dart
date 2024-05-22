@@ -20,11 +20,17 @@ class EditProfile extends ConsumerStatefulWidget {
 }
 
 class _EditProfileState extends ConsumerState<EditProfile> {
+  
   final _formKey = GlobalKey<FormState>();
   late String _firstName;
   late String _lastName;
   late String _phoneNumber;
   late String _email;
+  late String _height;
+  late String _weight;
+  late String _preferedPosition;
+  late String _foot;
+  late String _jerseyNumber;
   String? coverPath;
   Uint8List? coverImageBytes;
   String? profilePath;
@@ -108,7 +114,11 @@ class _EditProfileState extends ConsumerState<EditProfile> {
         'lName': _lastName,
         'phone': _phoneNumber,
         'email': _email,
-        'date' : date.toString().split(" ")[0]
+        'date' : date.toString().split(" ")[0],
+        'weight': _weight,
+        'height': _height,
+        'jersey': _jerseyNumber,
+        'position': _preferedPosition,
         // 'image': imageUrl,
       },
     );
@@ -148,6 +158,7 @@ class _EditProfileState extends ConsumerState<EditProfile> {
 
   @override
   Widget build(BuildContext context) {
+    print(widget.currentUser);
     final profileData = ref.watch(userDataProvider);
 
     double a = 0;
@@ -508,6 +519,191 @@ class _EditProfileState extends ConsumerState<EditProfile> {
                                     ),
                                   ),
                                 ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: width(30)),
+                        Row(
+                          children: [
+                            Column(
+                              children: [
+                                SizedBox(height: width(15)),
+                                Text(
+                                  'Height',
+                                  style: TextStyle(
+                                      color: Color(0xffBFBCA0),
+                                      fontSize: width(16),
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            SizedBox(width: width(20)),
+                            Expanded(
+                              child: TextFormField(
+                                style: TextStyle(
+                                    color: Color(0xFFF1EED0),
+                                    fontSize: width(14)),
+                                initialValue: '1.27 m',
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                ),
+                                maxLength: 8,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                onSaved: (value) {
+                                  _height = value!;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: width(30)),
+                        Row(
+                          children: [
+                            Column(
+                              children: [
+                                SizedBox(height: width(15)),
+                                Text(
+                                  'Weight',
+                                  style: TextStyle(
+                                      color: Color(0xffBFBCA0),
+                                      fontSize: width(16),
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            SizedBox(width: width(20)),
+                            Expanded(
+                              child: TextFormField(
+                                style: TextStyle(
+                                    color: Color(0xFFF1EED0),
+                                    fontSize: width(14)),
+                                initialValue: '70 Kg',
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                ),
+                                maxLength: 8,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                onSaved: (value) {
+                                  _weight = value!;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: width(30)),
+                        Row(
+                          children: [
+                            Column(
+                              children: [
+                                SizedBox(height: width(15)),
+                                Text(
+                                  'Foot',
+                                  style: TextStyle(
+                                      color: Color(0xffBFBCA0),
+                                      fontSize: width(16),
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            SizedBox(width: width(20)),
+                            Expanded(
+                              child: TextFormField(
+                                style: TextStyle(
+                                    color: Color(0xFFF1EED0),
+                                    fontSize: width(14)),
+                                initialValue: 'Right',
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                ),
+                                maxLength: 8,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                onSaved: (value) {
+                                  _foot = value!;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: width(30)),
+                        Row(
+                          children: [
+                            Column(
+                              children: [
+                                SizedBox(height: width(15)),
+                                Text(
+                                  'Prefered Jursey Number',
+                                  style: TextStyle(
+                                      color: Color(0xffBFBCA0),
+                                      fontSize: width(16),
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            SizedBox(width: width(20)),
+                            Expanded(
+                              child: TextFormField(
+                                style: TextStyle(
+                                    color: Color(0xFFF1EED0),
+                                    fontSize: width(14)),
+                                initialValue: '1',
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                ),
+                                maxLength: 8,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                onSaved: (value) {
+                                  _jerseyNumber = value!;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                         SizedBox(height: width(30)),
+                        Row(
+                          children: [
+                            Column(
+                              children: [
+                                SizedBox(height: width(15)),
+                                Text(
+                                  'Prefered Position',
+                                  style: TextStyle(
+                                      color: Color(0xffBFBCA0),
+                                      fontSize: width(16),
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            SizedBox(width: width(20)),
+                            Expanded(
+                              child: TextFormField(
+                                style: TextStyle(
+                                    color: Color(0xFFF1EED0),
+                                    fontSize: width(14)),
+                                initialValue: 'CM',
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                ),
+                                maxLength: 8,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                onSaved: (value) {
+                                  _preferedPosition = value!;
+                                },
                               ),
                             ),
                           ],

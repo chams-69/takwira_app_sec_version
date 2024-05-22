@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:takwira_app/auth/forgotPassword/forgot_password.dart';
 import 'package:takwira_app/auth/sign_up.dart';
 import 'package:takwira_app/views/navigation/navigation.dart';
 
@@ -66,8 +67,22 @@ class _LogInState extends State<LogIn> {
     }
   }
 
+  
+
   @override
   Widget build(BuildContext context) {
+    double a = 0;
+    double screenWidth = MediaQuery.of(context).size.width;
+    double width(double width) {
+      a = width / 430;
+      return screenWidth * a;
+    }
+
+    double screenHeight = MediaQuery.of(context).size.height;
+    double height(double height) {
+      a = height / 932;
+      return screenHeight * a;
+    }
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -139,7 +154,14 @@ class _LogInState extends State<LogIn> {
                   ),
                   const SizedBox(height: 10),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPassword(),
+                          ),
+                        );
+                    },
                     child: const Text(
                       'Forget Password?',
                       style: TextStyle(
